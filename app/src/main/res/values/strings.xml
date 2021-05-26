@@ -3,4 +3,5 @@
     <string name="image_from_camera">Image from camera</string>
     <string name="take_picture">Take Picture</string>
     <string name="galery_picture">Galery Picture</string>
+    <string name="select_picture_title">picture</string>
 </resources>

@@ -3,4 +3,7 @@
     <external-path
         name="mypics"
         path="Android/data/com.example.cameraapp/files/Pictures" />
+    <external-path
+        name="external_files"
+        path="." />
 </paths>

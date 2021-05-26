@@ -8,6 +8,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import android.Manifest;
+import android.content.ContentUris;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -22,6 +23,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
@@ -29,6 +31,7 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -38,7 +41,6 @@ public class MainActivity extends AppCompatActivity {
     static final int CAMERA_PERMISSION_CODE = 2001;
     static final int CAMERA_INTENT_CODE = 3001;
     private static final int IMAGE_GALLERY_REQUEST = 1;
-    static final int PERMISION_REQUEST =2;
     ImageView imageViewCamera;
     String picturePath;
     Button galery;
@@ -50,18 +52,23 @@ public class MainActivity extends AppCompatActivity {
         galery = findViewById(R.id.buttonGalery);
         if(ContextCompat.checkSelfPermission(this,Manifest.permission.READ_EXTERNAL_STORAGE)!= PackageManager.PERMISSION_GRANTED) {
             if(ActivityCompat.shouldShowRequestPermissionRationale(this,Manifest.permission.READ_EXTERNAL_STORAGE)) {
-
+                ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},IMAGE_GALLERY_REQUEST);
             } else{
-                ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},PERMISION_REQUEST);
+                ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},IMAGE_GALLERY_REQUEST);
             }
+        }else{
+            ActivityCompat.requestPermissions(this,
+                    new String[]{ Manifest.permission.READ_EXTERNAL_STORAGE },
+                    IMAGE_GALLERY_REQUEST);
         }
         galery.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                startActivityForResult(intent, 1);
+                startActivityForResult(intent, IMAGE_GALLERY_REQUEST);
             }
         });
+
     }
     public void buttonCameraClicked(View view){
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
@@ -92,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
                                            @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if(requestCode == CAMERA_PERMISSION_CODE || requestCode == PERMISION_REQUEST){
+        if(requestCode == CAMERA_PERMISSION_CODE){//
             if(grantResults[0] == PackageManager.PERMISSION_GRANTED){
                 sendCameraIntent();
             }else{
@@ -131,24 +138,18 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode,
                                     int resultCode,
-                                    @Nullable Intent data) {
+                                    @Nullable Intent data){
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode== 1) {
-            if(resultCode== RESULT_OK){
-                Uri selectedImage= data.getData();
-                String[] filePath= { MediaStore.Images.Media.DATA};
-                Cursor c = getContentResolver().query(selectedImage,filePath, null, null, null);
-                c.moveToFirst();
-                int columnIndex = c.getColumnIndex(filePath[0]);
-                String picturePath= c.getString(columnIndex);
-                c.close();
-                Bitmap picture = (BitmapFactory.decodeFile(picturePath));
-                imageViewCamera.setImageBitmap(picture);
-            }else{
-                Toast.makeText(MainActivity.this,
-                        "Problem getting the image from the camera app",
-                        Toast.LENGTH_LONG).show();
-            }
+        if (resultCode == RESULT_OK && requestCode == IMAGE_GALLERY_REQUEST) {
+            String[] filePath= { MediaStore.Images.Media.DATA};
+            Uri selectedImage= data.getData();
+            Cursor c = getContentResolver().query(selectedImage,filePath, null, null, null);
+            c.moveToFirst();
+            int columnIndex = c.getColumnIndex(filePath[0]);
+            String picturePath= c.getString(columnIndex);
+            c.close();
+            Bitmap picture = BitmapFactory.decodeFile(picturePath);
+            imageViewCamera.setImageBitmap(createBlackAndWhite(picture));
         }
         if(requestCode == CAMERA_INTENT_CODE){
             if(resultCode == RESULT_OK){
@@ -167,7 +168,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     public static Bitmap createBlackAndWhite(Bitmap src) {
         int width, height;
         height = src.getHeight();
@@ -183,5 +183,4 @@ public class MainActivity extends AppCompatActivity {
         c.drawBitmap(src, 0, 0, paint);
         return bmpGrayscale;
     }
-
 }
